@@ -1,0 +1,6 @@
+[package]
+name = "internet-of-coffee"
+version = "0.1.0"
+authors = ["Johan Burell <johan.burell@valtech.se>"]
+
+[dependencies]
