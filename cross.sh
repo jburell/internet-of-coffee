@@ -9,7 +9,8 @@ export SYSROOT="$tools/arm-bcm2708/arm-bcm2708hardfp-linux-gnueabi/arm-bcm2708ha
 export PATH="$tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin":$PATH
 
 #Set up our tools for anyting using these variables
-export CC="$tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/gcc-sysroot"
+#export CC="$tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/gcc-sysroot"
+export CC="$tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/arm-linux-gnueabihf-gcc"
 export AR="$tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin/arm-linux-gnueabihf-ar"
 
 #Set target triple
