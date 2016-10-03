@@ -1,2 +1,5 @@
 target
 Cargo.lock
+sparkfun_keys.json
+weight.log
+old_cross.sh
