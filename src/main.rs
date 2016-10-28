@@ -28,7 +28,9 @@ fn main() {
     }
 
     let device_path = env::args().nth(1).unwrap();
-    let logfile_path = env::args().nth(2).unwrap();
+    let logfile_path = format!("{}{}",
+                               env::args().nth(2).unwrap(),
+                               chrono::UTC::now().format("%F@%H-%M-%S"));
 
     let lower_limit = env::args().nth(3).unwrap().parse::<u32>().unwrap();
     let upper_limit = env::args().nth(4).unwrap().parse::<u32>().unwrap();
@@ -38,14 +40,29 @@ fn main() {
     let mut log_file = File::create(logfile_path.clone())
         .ok().expect(format!("Could not open file {} to log to", logfile_path).as_str());
 
+    main_loop(&mut tty_usb, &mut log_file, lower_limit, upper_limit);
+
+    /*Iron::new(|_: &mut Request| {
+        Ok(Response::with((status::Ok, "Hello World2!")))
+    }).http("localhost:3000").unwrap();*/
+}
+
+fn main_loop(tty_usb: &mut File, log_file: &mut File, lower_limit: u32, upper_limit: u32) {
     let regex_pattern = r"\d+";
     let weight_matcher = Regex::new(regex_pattern).unwrap();
 
     let mut data: [u8; 512] = [0u8; 512];
+
     loop {
         let num_bytes = tty_usb.read(&mut data).unwrap();
-        let line = std::str::from_utf8(&data[0..num_bytes])
-            .ok().expect("Could not convert data from tty to UTF-8 string").trim();
+        let line = match std::str::from_utf8(&data[0..num_bytes]) {
+            Ok(l) => l.trim(),
+            Err(e) => {
+                // "Could not convert data from tty to UTF-8 string"
+                println!("{}", Colour::Purple.paint(e.to_string()));
+                continue;
+            },
+        };
 
         if line.len() == 0 { continue; };
 
@@ -71,8 +88,4 @@ fn main() {
         //        phant.add("weight", line);
         //        println!("Result of push: {}", phant.push().ok().expect("Pushing to server did not succeed"));
     }
-
-    /*Iron::new(|_: &mut Request| {
-        Ok(Response::with((status::Ok, "Hello World2!")))
-    }).http("localhost:3000").unwrap();*/
 }
