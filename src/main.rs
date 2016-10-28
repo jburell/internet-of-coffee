@@ -6,12 +6,14 @@ use iron::status;*/
 //extern crate phant;
 extern crate chrono;
 extern crate regex;
+extern crate ansi_term;
 
 use std::fs::File;
 use std::io::{Read, Write};
 //use std::time::SystemTime;
 use std::env;
 use regex::Regex;
+use ansi_term::Colour;
 
 
 fn main() {
@@ -45,6 +47,8 @@ fn main() {
         let line = std::str::from_utf8(&data[0..num_bytes])
             .ok().expect("Could not convert data from tty to UTF-8 string").trim();
 
+        if line.len() == 0 { continue; };
+
         let now = chrono::UTC::now();
         let data_str = format!("{}: {}", now.format("%b %-d, %-I:%M:%S%.3f").to_string(), line);
         let caps = weight_matcher.captures(line);
@@ -55,13 +59,13 @@ fn main() {
         let coffee_status = match status_str.parse::<u32>() {
             Ok(r) =>
                 match r {
-                    r if r < lower_limit => "LOW",
-                    r if r > upper_limit => "HIGH",
-                    _ => "NORMAL",
+                    r if r < lower_limit => Colour::Red.paint("LOW"),
+                    r if r > upper_limit => Colour::Green.paint("HIGH"),
+                    _ => Colour::Yellow.paint("NORMAL"),
                 },
-            Err(_) => "UNKNOWN",
+            Err(_) => Colour::Cyan.paint("UNKNOWN"),
         };
-        println!("{}Coffee level: {}", data_str, coffee_status);
+        println!("{}\nCoffee level: {}", data_str, coffee_status);
         let _ = log_file.write(data_str.into_bytes().as_slice());
 
         //        phant.add("weight", line);
