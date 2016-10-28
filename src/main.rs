@@ -20,7 +20,8 @@ fn main() {
                                          "priv", None);*/
 
     if env::args().count() != 5 {
-        println!("Usage: {} <device> <logfile> <lower_limit_in_grams> <upper_limit_in_grams>", env::args().nth(0).unwrap());
+        println!("Usage: {} <device> <logfile> <lower_limit_in_grams> <upper_limit_in_grams>",
+                 env::args().nth(0).unwrap());
         std::process::exit(1);
     }
 
@@ -30,8 +31,10 @@ fn main() {
     let lower_limit = env::args().nth(3).unwrap().parse::<u32>().unwrap();
     let upper_limit = env::args().nth(4).unwrap().parse::<u32>().unwrap();
 
-    let mut tty_usb = File::open(device_path.clone()).ok().expect(format!("Could not open device {}", device_path).as_str());
-    let mut log_file = File::create(logfile_path.clone()).ok().expect(format!("Could not open file {} to log to", logfile_path).as_str());
+    let mut tty_usb = File::open(device_path.clone())
+        .ok().expect(format!("Could not open device {}", device_path).as_str());
+    let mut log_file = File::create(logfile_path.clone())
+        .ok().expect(format!("Could not open file {} to log to", logfile_path).as_str());
 
     let regex_pattern = r"\d+";
     let weight_matcher = Regex::new(regex_pattern).unwrap();
@@ -39,7 +42,9 @@ fn main() {
     let mut data: [u8; 512] = [0u8; 512];
     loop {
         let num_bytes = tty_usb.read(&mut data).unwrap();
-        let line = std::str::from_utf8(&data[0..num_bytes]).ok().expect("Could not convert data from tty to UTF-8 string");
+        let line = std::str::from_utf8(&data[0..num_bytes])
+            .ok().expect("Could not convert data from tty to UTF-8 string").trim();
+
         let now = chrono::UTC::now();
         let data_str = format!("{}: {}", now.format("%b %-d, %-I:%M:%S%.3f").to_string(), line);
         let caps = weight_matcher.captures(line);
