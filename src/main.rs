@@ -49,8 +49,8 @@ enum CoffeeLevel {
 }
 
 struct LevelConfig {
-    high: u32,
-    low: u32,
+    max: u32,
+    min: u32,
 }
 
 
@@ -90,7 +90,7 @@ fn main() {
 
 fn main_loop(tty_usb: &mut File, log_file: &mut File, lower_limit: u32, upper_limit: u32) {
     let path: &Path = Path::new("fonts/comicbd.ttf");
-    run(path, &LevelConfig { high: upper_limit, low: lower_limit }, tty_usb, log_file);
+    run(path, &LevelConfig { max: upper_limit, min: lower_limit }, tty_usb, log_file);
 
     /*loop {
 
@@ -126,10 +126,10 @@ fn handle_value(line: &str, level_config: &LevelConfig, log_file: &mut File) -> 
 
         let parse_res = match status_str.parse::<u32>() {
             Ok(r) =>
-                (match r {
-                    r if r < level_config.low => Colour::Red.paint("LOW"),
-                    r if r > level_config.high => Colour::Green.paint("HIGH"),
-                    _ => Colour::Yellow.paint("NORMAL"),
+                (match select_level(r, level_config) {
+                    CoffeeLevel::HIGH => Colour::Green.paint("HIGH"),
+                    CoffeeLevel::NORMAL => Colour::Yellow.paint("NORMAL"),
+                    CoffeeLevel::LOW => Colour::Red.paint("LOW"),
                 }, Some(r)),
             Err(_) => (Colour::Cyan.paint("UNKNOWN"), None),
         };
@@ -219,9 +219,10 @@ fn init_gfx(font: &mut Font, renderer: &mut Renderer) -> LevelTextures {
 
 
 fn select_level(weight: u32, config: &LevelConfig) -> CoffeeLevel {
+    let padding = ((config.max - config.min) as f32 * 0.2f32) as u32;
     match weight {
-        w if w > config.high => CoffeeLevel::HIGH,
-        w if w < config.low => CoffeeLevel::LOW,
+        w if w > config.max - padding => CoffeeLevel::HIGH,
+        w if w < config.min + padding => CoffeeLevel::LOW,
         _ => CoffeeLevel::NORMAL,
     }
 }
@@ -253,7 +254,9 @@ fn run(font_path: &Path, level_config: &LevelConfig, tty_usb: &mut File, mut log
 
     // Load a font
     let mut font = ttf_context.load_font(font_path, 128).unwrap();
+    let mut font_percent = ttf_context.load_font(font_path, 32).unwrap();
     font.set_style(sdl2_ttf::STYLE_BOLD);
+    font_percent.set_style(sdl2_ttf::STYLE_BOLD);
 
     let mut tex_levels = init_gfx(&mut font, &mut renderer);
 
@@ -261,12 +264,24 @@ fn run(font_path: &Path, level_config: &LevelConfig, tty_usb: &mut File, mut log
         // factor this into a separate thread/future/concept for concurrency of the day
         match read_and_log(tty_usb, &mut log_file, level_config) {
             Some(weight) => {
-                let mut tex_level = select_tex_for_level(select_level(weight, level_config), &tex_levels);
-                // Run loop
                 renderer.set_draw_color(Color::RGBA(102, 58, 23, 255)); // Brown
                 renderer.clear();
+
+                let mut tex_level = select_tex_for_level(select_level(weight, level_config), &tex_levels);
                 renderer.copy(&tex_levels.texture_label, None, Some(tex_levels.target_label));
                 renderer.copy(&mut tex_level, None, Some(tex_levels.target_level));
+
+
+                let corrected_weight = if weight < level_config.min { level_config.min } else { weight };
+                let mut coffee_ratio = (corrected_weight - level_config.min) as f32 / (level_config.max - level_config.min) as f32;
+                let coffee_percent = if coffee_ratio < 0f32 { 0f32 } else { coffee_ratio * 100f32 };
+                let surface_coffee_percent = font_percent.render(format!("{}% kaffe", coffee_percent).as_str())
+                .blended(Color::RGBA(255, 255, 255, 255)).unwrap();
+                let mut coffee_tex = renderer.create_texture_from_surface(&surface_coffee_percent).unwrap();
+                let TextureQuery { width, height, .. } = coffee_tex.query();
+                let coffe_tex_rect = rect!(SCREEN_WIDTH - 32 - width, SCREEN_HEIGHT - 32 - height, width, height);
+                renderer.copy(&coffee_tex, None, Some(coffe_tex_rect));
+
                 renderer.present();
             },
             None => {},
